@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-const char elf_interpreter[] __attribute__((section(".interp"))) = ELF_INTERPRETER_PATH;
+#if @ELF_EXEC_LIB@    /* @ ELF_EXEC_LIB @ */
+const char elf_interpreter[] __attribute__((section(".interp"))) = "@ELF_INTERPRETER_PATH@";
+#endif /* @ ELF_EXEC_LIB @ */
 
 const char *vstr = "@LSTORE_INC_VERSION_STRING@\n"
              "CMake Build Date: @BUILD_DATE@\n"
