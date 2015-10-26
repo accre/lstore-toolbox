@@ -19,16 +19,16 @@ const char *@LSTORE_PROJECT_NAME@_version() {
 }
 
 void print_@LSTORE_PROJECT_NAME@_version_and_exit() {
-        printf("Library version and build info:\n%s",vstr);
-	exit(0);
+    printf("Library version and build info:\n%s",vstr);
+    exit(0);
 }
 
 void print_@LSTORE_PROJECT_NAME@_version() {
-        printf("Version and build info:\n%s",vstr);
+    printf("Version and build info:\n%s",vstr);
 }
 
 int main(int argc, char **argv)
 {
-        print_@LSTORE_PROJECT_NAME@_version();
-        return 0;
+    print_@LSTORE_PROJECT_NAME@_version();
+    return 0;
 }
