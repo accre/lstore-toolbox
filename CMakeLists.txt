@@ -42,7 +42,49 @@ set(LSTORE_PROJECT_INCLUDES
                 type_malloc.h transfer_buffer.h packer.h append_printf.h
                 chksum.h varint.h atomic_counter.h dns_cache.h iniparse.h
                 log.h assert_result.h)
+# TODO add adler header?
 set(LSTORE_PROJECT_EXECUTABLES sl_test isl_test varint_test)
+
+
+#set( CMAKE_VERBOSE_MAKEFILE on )
+
+# enable or disable use of alternate performance optimized versions of some functions
+# (may include use of architecture specific asm)
+set(OPT_VERSIONS TRUE)
+
+set(USE_ASM 0)   # TODO generalize this to scale to multiple platforms/arch/features
+if(OPT_VERSIONS)
+    if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64")
+#        enable_language(ASM-ATT)
+#        if(CMAKE_ASM-ATT_COMPILER_WORKS)
+#                
+
+#gcc -x assembler-with-cpp -c -o test.o adler32_x64.S
+
+            add_custom_command(
+                OUTPUT adler32_x64.o
+                COMMAND gcc
+                ARGS -x assembler-with-cpp -c -o adler32_x64.o ${CMAKE_SOURCE_DIR}/adler32_x64.S
+                VERBATIM
+            )
+            set(USE_ASM 1)
+            message(STATUS "OPT_VERSIONS is TRUE and conditions are met: Using alternate x86_64 optimized code where available.")
+
+            set_source_files_properties(adler32_x64.o PROPERTIES GENERATED true)
+            set(LSTORE_PROJECT_OBJS ${LSTORE_PROJECT_OBJS} adler32_x64.o) 
+            configure_file(${CMAKE_SOURCE_DIR}/adler32_opt.h.in  ${CMAKE_SOURCE_DIR}/adler32_opt.h)
+            set(LSTORE_PROJECT_INCLUDES ${LSTORE_PROJECT_INCLUDES} adler32_opt.h) 
+#        endif(CMAKE_ASM-ATT_COMPILER_WORKS)
+    endif("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64")
+endif(OPT_VERSIONS)
+
+if(NOT USE_ASM)
+    #
+    message(STATUS "Not using alternate optimized code, either disabled (OPT_VERSIONS) or conditions not met.")
+    configure_file(${CMAKE_SOURCE_DIR}/adler32_opt.h.in  ${CMAKE_SOURCE_DIR}/adler32_opt.h)
+    set(LSTORE_PROJECT_INCLUDES ${LSTORE_PROJECT_INCLUDES} adler32_opt.h) 
+endif(NOT USE_ASM)
+
 
 # Common functionality is stored here
 include(cmake/LStoreCommon.cmake)

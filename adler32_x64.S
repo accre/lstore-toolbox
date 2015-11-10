@@ -578,8 +578,20 @@ x64_adler32_64:   /* same as x64_adler32 except assume 16 byte alignment and n*6
 	jb	.unpack_SIMD_result		# Note was "jl" but we are dealing with unsigned so I thinkk it should be "jb"
 	jmp		.outer_init
 
+	# const data inside the .text section accessed below via %rip-relative addressing. This is close to the instructions
+	# that access these constants and this will never get executed as instructions because of the unconditional jump above
 
-
+	# put our multiplier arrays in .text and use instruction pointer relative addressing (aka %rip-relative)
+	# this makes keeping this -fPIC compatible easier and should be good for performance
+	.align 16
+	const_4x32bit_0x2x:
+		.long	0,0,2,0
+	const_4x32bit_4x6x:
+		.long	4,0,6,0	
+	const_4x32bit_1x3x:
+		.long	1,0,3,0
+	const_4x32bit_5x7x:
+		.long	5,0,7,0	
 
 
 
@@ -625,18 +637,19 @@ x64_adler32_64:   /* same as x64_adler32 except assume 16 byte alignment and n*6
 	pslld		$(WIDTH_LOG2 + 1),%xmm0		# + 1 because we add A and B together so we need to be one order of magnitude larger base 2
 	movdqa		%xmm0,%xmm6
 
+
 	# calculate adjustment for H A [ -0, -1, -2, -3] and
 	# H B [ -4, -5, -6, -7 ] with interleaved operations
 	movdqa		%L_ACUM_VEC32b_A,%xmm1		#A
 	movdqa		%L_ACUM_VEC32b_B,%xmm2		#B
 	movdqa		%L_ACUM_VEC32b_A,%H_ADJUST_A	#A
 	movdqa		%L_ACUM_VEC32b_B,%H_ADJUST_B	#B
-	PMULUDQ		(const_4x32bit_0x2x),%xmm1	#A multiply 1st and third 32bit packed ints and store result as two 64bit ints
-	PMULUDQ		(const_4x32bit_4x6x),%xmm2	#B multiply 1st and third 32bit packed ints and store result as two 64bit ints
+	PMULUDQ		const_4x32bit_0x2x(%rip),%xmm1	#A multiply 1st and third 32bit packed ints and store result as two 64bit ints
+	PMULUDQ		const_4x32bit_4x6x(%rip),%xmm2	#B multiply 1st and third 32bit packed ints and store result as two 64bit ints
 	PSHUFD		$0xb1,%H_ADJUST_A,%H_ADJUST_A	#A this should swap 1st and 2nd, 3rd and 4th ints
 	PSHUFD		$0xb1,%H_ADJUST_B,%H_ADJUST_B	#B this should swap 1st and 2nd, 3rd and 4th ints
-	PMULUDQ		(const_4x32bit_1x3x),%H_ADJUST_A	#A multiply 1st and 3rd 32bit packed ints and store as two 64bit ints
-	PMULUDQ		(const_4x32bit_5x7x),%H_ADJUST_B	#B multiply 1st and 3rd 32bit packed ints and store as two 64bit ints
+	PMULUDQ		const_4x32bit_1x3x(%rip),%H_ADJUST_A	#A multiply 1st and 3rd 32bit packed ints and store as two 64bit ints
+	PMULUDQ		const_4x32bit_5x7x(%rip),%H_ADJUST_B	#B multiply 1st and 3rd 32bit packed ints and store as two 64bit ints
 	PSHUFD          $0xb1,%H_ADJUST_A,%H_ADJUST_A	#A this should swap 1st and 2nd, 3rd and 4th ints and reverse the shuffle above
 	PSHUFD          $0xb1,%H_ADJUST_B,%H_ADJUST_B	#B this should swap 1st and 2nd, 3rd and 4th ints and reverse the shuffle above
 							## putting the lower 32bits of of the product in position 2 and 4 
@@ -742,15 +755,3 @@ x64_adler32_64:   /* same as x64_adler32 except assume 16 byte alignment and n*6
 .error:
 	movq	$0xffffffff,%rax	# return invalid adler32
 	retq
-
-.data
-.align 16
-const_4x32bit_0x2x:
-	.long	0,0,2,0
-const_4x32bit_4x6x:
-	.long	4,0,6,0	
-const_4x32bit_1x3x:
-	.long	1,0,3,0
-const_4x32bit_5x7x:
-	.long	5,0,7,0	
-
